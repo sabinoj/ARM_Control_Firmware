@@ -1,14 +1,26 @@
 flags = -O3
-micro = atmega8
+micro = atmega164p
 
 makeCompile: main.c
-	avr-gcc -g $(flags) -mmcu=$(micro) -c main.c
-	avr-gcc -g $(flags) -mmcu=$(micro) -c LED_Button.c
-	avr-gcc -g $(flags) -mmcu=$(micro) -c LCD.c
-	avr-gcc -g $(flags) -mmcu=$(micro) -c adc.c
-	avr-gcc -g $(flags) -mmcu=$(micro) -o main.elf ./main.o ./LED_Button.o ./LCD.o ./adc.o
+	avr-gcc -g $(flags) -mmcu=$(micro) -std=c99 -c main.c
+	avr-gcc -g $(flags) -mmcu=$(micro) -std=c99 -c adc.c
+	avr-gcc -g $(flags) -mmcu=$(micro) -std=c99 -c serial.c
+	avr-gcc -g $(flags) -mmcu=$(micro) -std=c99 -o main.elf ./main.o ./adc.o ./serial.o 
 	avr-objcopy -j .text -j .data -O ihex main.elf main.hex
-	sudo avrdude -c USBasp -p $(micro) -U flash:w:main.hex:i 
+	avrdude -c USBasp -p $(micro) -U flash:w:main.hex:i 
 
-fuse:
-	sudo avrdude -c USBasp -p $(micro) -U lfuse:w:0xc4:m -U hfuse:w:0xd9:m 
+flashCrystal:
+	# External crystal oscillator 8mhz or greater with max startup time
+	# Disables JTAG so PortC can be used as GPIO pins
+	avrdude -c USBasp -p $(micro) -U lfuse:w:0xde:m -U hfuse:w:0xd9:m	
+
+flash8mhzCKOPT:
+	# Enables full voltage swing on XTAL, don't use this
+	# avrdude -c USBasp -p $(micro) -U lfuse:w:0xde:m -U hfuse:w:0xc9:m	
+
+readfuse:
+	avrdude -c USBASP -p $(micro) -U hfuse:r:high:h -U lfuse:r:low:h
+	cat low
+	cat high
+	rm low
+	rm high

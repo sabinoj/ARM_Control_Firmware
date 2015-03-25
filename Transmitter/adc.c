@@ -1,50 +1,26 @@
-/*********************************************
-Title: ADC Library
-Author: Jonathan Wang
+#include "defs.h"
 
-Description:
-	Basic functions for ADC use
-*********************************************/
-#include <avr/io.h> 
-#include "adc.h"
-#include "LCD.h"
-
-void adcInit() 
-{
-	ADCSRA  = (1<<ADEN) | (1<<ADPS2) | (1<<ADPS0);  // Configure ADC
+void adcInit() {
+	// Enable ADC and prescale clock to 125kHz for 8mHz clock
+	ADCSRA  = (1<<ADEN) | (1<<ADPS2) | (1<<ADPS1);
+	ADMUX = (1 << REFS0); // Disconnect AREF, use AVCC as reference
 }
 
-int getADC(int chan) 
-{
-	ADMUX = chan;			// Use C0 for ADC reading
-	ADCSRA  |= (1<<ADSC);  		// Start conversion
-	while (!(ADCSRA & (1<<ADIF)));  // Wait for completion
-	return ADCW;			// Store ADC result
+int getADC(int chan) {
+	ADMUX = (1 << REFS0) | chan;	// Select channel for ADC reading
+	ADCSRA  |= (1<<ADSC);  // Start conversion
+	while (ADCSRA & (1<<ADSC));  // Wait for completion
+
+	return ADCW;	// Store ADC result
 }
 
-int getAVG(int n)
-{
-	int i, sum;
-	for (i = 0; i < n; i++)
-		sum += getADC(0);
+// Samples chan for NUM_READINGS ADC values and averages them
+int avgADC(int chan) {
+	int i, value = 0;
 
-	return sum/n;
-}
-
-int avgADC(int avg, int x) 
-{
-	return (avg*(x-1) + getADC(0))/x;
-}
-
-// Prints the ADC value as a int value
-void print_ADC(int val)
-{
-	int i = 0;
-	while(i<4)
-	{
-		Command(0xCF-i);
-		Print('0' + val%10);
-		i++;
-		val /= 10;
+	for(i = 0; i<NUM_READINGS; i++) {
+		value += getADC(chan);
 	}
+
+	return value/NUM_READINGS;
 }

@@ -1,0 +1,8 @@
+# Ignore all files.
+*.*
+
+# Add back the code and .gitignore
+!.gitignore
+!*.c
+!*.h
+!Makefile
