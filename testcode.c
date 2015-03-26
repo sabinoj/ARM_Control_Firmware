@@ -112,3 +112,13 @@
 	data[4] = 'o';
 	data[5] = '!';
  }
+
+ // PROCESSBUTTON FUNCTION
+// Does something when button is pressed, and debounces
+void processButton() {	
+	_delay_ms(10);
+	//PORTC ^= 0x04;
+	rcvrFlag = 1;
+	while(BUTTON_PRESSED);
+	_delay_ms(10);
+}

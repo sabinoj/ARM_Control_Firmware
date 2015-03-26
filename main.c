@@ -2,19 +2,17 @@
 #include "defs.h"
 #include "adc.h"
 #include "serial.h"
-//#include "timer.h"
+#include "timer.h"
 #include <avr/interrupt.h>
-#include <util/delay.h>
 #include <stdio.h>
 
 // Function Prototypes
 void getData();
-void processButton();
-void txData();
-void timerInit();
-void dataToTerminal();
-int rxData();
+void txData(char *, int);
+int rxData(char *, int);
 int roboteqInit();
+void dataToTerminal();
+int dataToRoboteq();
 
 // SYSINIT FUNCTION
 // Sets port data directions and initializes systems
@@ -24,7 +22,7 @@ void sysInit() {
 	DDRB = 0x00;		// B0-7 as input
 	PORTB = 0xFF;		// Enable B's pull-up resistors
 	DDRC = 0x0F;		// Set PortC 0-3 as output
-	PORTC = 0xF1;		// Enable PortC's pull-up resistors
+	PORTC = 0xF0;		// Enable PortC's pull-up resistors
 	DDRD  = 0x80;   	// D3 as output
 	PORTD |= 0x80;  	// Turn on the power LED
 
@@ -33,9 +31,10 @@ void sysInit() {
 	rxRadioFlag = 0;
 	rxWireFlag = 0;
 	startDataFlag = 0;
-	targetDevice = TERMINAL;
-	tenMS_Timer = INTS_PER_10MS;
+	targetDevice = ROBOTEQ;
+	twentyFiveMS_Timer = INTS_PER_25MS;
 	secondTimer = INTS_PER_SECOND;
+	roboteqResponseTime = 0;
 
 	adcInit();
 	wireInit();
@@ -45,9 +44,16 @@ void sysInit() {
 	sei();
 }
 
+
 // MAIN FUNCTION
+// Initializes hardware
+// Runs main program loop for Transmitter or Receiver, chosen at compile
 int main() {
+	int counter = 0;
+	char buffer[100];
 	sysInit();
+
+	PORTC |= POWER_LED;
 
 	// TRANSMITTER MAIN PROGRAM LOOP
 	#ifdef TRANSMITTER 
@@ -58,7 +64,7 @@ int main() {
 
 		// Ready command from receiver?
 		if (rcvrFlag == 1) { 
-			txData();  // transmit the data buffer
+			txData(data, NUM_ADC_CHANS + NUM_DIGITAL_CHANS);  // transmit the data buffer
 			rcvrFlag = 0;  // set the ready flag low
 		}
 		
@@ -85,12 +91,16 @@ int main() {
 
 	// RECEIVER MAIN PROGRAM LOOP
 	#ifdef RECEIVER
-	PORTC |= 0x02;
+	
 	while(1) {
 		// am I ready to receive data?
 		if (rcvrFlag == 1) {
 			if (targetDevice == TERMINAL) {
 				wireSendString("Requesting data...\r\n");
+			}
+			else {
+				sprintf(buffer, "Requesting data #%d...\r\n", counter++);
+				wireSendString(buffer);
 			}
 			radioSend(RCVR_READY);
 			rcvrFlag = 0;
@@ -99,12 +109,13 @@ int main() {
 		// start byte from transmitter?
 		if (startDataFlag == 1) {
 			// populate the buffer
-			if (rxData()) {
+			if (rxData(data, NUM_ADC_CHANS + NUM_DIGITAL_CHANS)) {
 				if (targetDevice == TERMINAL) {
 					dataToTerminal();
 				}
 				else if (targetDevice == ROBOTEQ) {
-					//dataToRoboteq();  // IMPLEMENT THIS!
+					dataToTerminal();
+					dataToRoboteq();  // IMPLEMENT THIS!
 				}
 			}
 			else {  // data bad?
@@ -119,24 +130,20 @@ int main() {
 			// process the command
 			// allow roboteq to resume
 		}
+
+		// Turn off the associate LED if timer expires
+		if (!radioAssocTmr)
+			PORTC &= ~RADIO_LED;
 	}
 	#endif
 
 	return 0;
 }
 
-// PROCESSBUTTON FUNCTION
-// Does something when button is pressed, and debounces
-void processButton() {	
-	_delay_ms(10);
-	PORTC ^= 0x04;
-	rcvrFlag = 1;
-	while(BUTTON_PRESSED);
-	_delay_ms(10);
-}
 
 // GETDATA
-// Gets 3 ADC readings, 2 digital readings, and populates the buffer
+// Collects 3 ADC readings, 2 digital readings, and populates the buffer
+// Returns nothing
 void getData() {
 	PORTA = 0xC1;  // Power to ADC channel 1
 	data[0] = getADC(1)/4;
@@ -154,91 +161,49 @@ void getData() {
 
 
 // TXDATA FUNCTION
-// Sends start byte, 6 unsigned chars, and a checksum of the added chars
-void txData() {
+// Sends start byte, size unsigned chars, and a checksum of the added chars
+// Returns nothing
+// TODO: Switch to choose start byte
+void txData(char *buffer, int size) {
 	unsigned char checksum = 0;
 
 	radioSend(START_BYTE);
-	for (int i = 0; i < NUM_ADC_CHANS + NUM_DIGITAL_CHANS; i++) {
-		radioSend(data[i]);
-		wireSend(data[i]);
-		checksum += data[i]; 
+	for (int i = 0; i < size; i++) {
+		radioSend(buffer[i]);
+		wireSend(buffer[i]);
+		checksum += buffer[i]; 
 	}
 	radioSend(checksum);
 }
 
+
 // RXDATA FUNCTION
-// Receives 6 chars and places them into a buffer
+// Receives size chars and places them into a buffer
 // Compares the sum of the chars against the checksum
 // Returns 1 if checksum match, 0 otherwise
-int rxData() {
+int rxData(char *buffer, int size) {
 	unsigned char checksum = 0;
 	rxRadioFlag = 0;
 
-	for (int i = 0; i < NUM_ADC_CHANS + NUM_DIGITAL_CHANS; i++) {
+	for (int i = 0; i < size; i++) {
 		while(!rxRadioFlag);
-		data[i] = received;
-		checksum += received;
+		buffer[i] = radioReceived;
+		checksum += radioReceived;
 		rxRadioFlag = 0;
 	}
 
 	while(!rxRadioFlag);
 	rxRadioFlag = 0;
-	if (checksum != received)
+	if (checksum != radioReceived)
 		return 0;
 	else
 		return 1;
 }
 
-// Generates timer interrupt 122 times per second
-void timerInit() {
-	TCCR0B=(1<<CS02);
-	TIMSK0 |=(1<<TOIE0);
-}
 
-// Timer system interrupt, flips flags
-ISR(TIMER0_OVF_vect) {
-	tenMS_Timer--;
-	if(!tenMS_Timer) {  // Process 10ms timer events
-		if (!rcvrFlag)
-			rcvrFlag = 1;
-
-		secondTimer--;
-		if(!secondTimer) {  // Process 1s timer events
-			secondTimer = INTS_PER_SECOND;
-
-			if(!cal_time)
-				cal_time--;
-		}
-
-		tenMS_Timer = INTS_PER_10MS;
-	}
-}
-
-// Wire TTL Rx data interrupt
-ISR(USART0_RX_vect) { 
-    rxWireFlag = 1;
-	received = UDR0;
-	if (received == RCVR_READY) 
-		rcvrFlag = 1;
-	else if (received == START_BYTE)
-		startDataFlag = 1;
-	else if (received == CONFIG_CMD)
-		configFlag = 1;
-}
-
-// Radio TTL Rx data interrupt
-ISR(USART1_RX_vect) { 
-    rxRadioFlag = 1;
-	received = UDR1;
-	if (received == RCVR_READY) 
-		rcvrFlag = 1;
-	else if (received == START_BYTE)
-		startDataFlag = 1;
-	else if (received == CONFIG_CMD)
-		configFlag = 1;
-}
-
+// DATATOTERMINAL FUNCTION
+// Prints the sensor data to terminal in a nice format
+// Returns nothing
 void dataToTerminal() {
 	char buf[80];
 
@@ -260,6 +225,10 @@ void dataToTerminal() {
 	wireSendString(buf);
 }
 
+
+// ROBOTEQINIT FUNCTION
+// Queries Roboteq for model number and initializes hardware
+// Returns 1 if successful, 0 otherwise
 int roboteqInit() {
 	// query roboteq for version
 		// start timer
@@ -270,4 +239,18 @@ int roboteqInit() {
 		// check for ++
 		// if ++, return 1
 	return 0; // timer expired
+}
+
+
+// DATATOROBOTEQ FUNCTION
+// Forms strings from sensor data and transmits to Roboteq
+// Returns 1 if all data successfully sent, 0 otherwise
+int dataToRoboteq() {
+	char buf[100];
+	wireSendString("Pinging Roboteq...!\r\n");
+	roboteqResponseTime = 5;
+	while (roboteqResponseTime);
+
+	wireSendString("Roboteq Timed Out\r\n");
+	return 0;
 }
