@@ -18,6 +18,8 @@
 #define NUM_ADC_CHANS 3  // Number of attached ADC sensors
 #define NUM_DIGITAL_CHANS 2  // Number of attached digital sensors
 #define DEBOUNCE_COUNT 100  // Counter for switch debouncing
+#define ROBOTEQ 1
+#define TERMINAL 2
 
 // Shared Variables
 #ifdef MAIN
@@ -30,6 +32,7 @@
 	unsigned char data[NUM_ADC_CHANS + NUM_DIGITAL_CHANS];  // Buffer with sensor data
 	unsigned char dataMin[NUM_ADC_CHANS];
 	unsigned char dataMax[NUM_ADC_CHANS];
+	unsigned char targetDevice;
 	unsigned int tenMS_Timer;
 	unsigned int secondTimer;
 	unsigned int cal_time;
@@ -40,7 +43,10 @@
 	extern volatile unsigned char rcvrFlag;  // Receiver is ready for sensor data
 	extern volatile unsigned char configFlag;  // Received command to enter config mode
 	extern volatile unsigned char startDataFlag;  // About to receive sensor data
-	extern unsigned char data[NUM_ADC_CHANS + NUM_DIGITAL_CHANS];
+	extern unsigned char data[NUM_ADC_CHANS + NUM_DIGITAL_CHANS];  // Buffer with sensor data
+	extern unsigned char dataMin[NUM_ADC_CHANS];
+	extern unsigned char dataMax[NUM_ADC_CHANS];
+	extern unsigned char targetDevice;
 	extern unsigned int tenMS_Timer;
 	extern unsigned int secondTimer;
 	extern unsigned int cal_time;

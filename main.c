@@ -12,7 +12,9 @@ void getData();
 void processButton();
 void txData();
 void timerInit();
+void dataToTerminal();
 int rxData();
+int roboteqInit();
 
 // SYSINIT FUNCTION
 // Sets port data directions and initializes systems
@@ -31,6 +33,7 @@ void sysInit() {
 	rxRadioFlag = 0;
 	rxWireFlag = 0;
 	startDataFlag = 0;
+	targetDevice = TERMINAL;
 	tenMS_Timer = INTS_PER_10MS;
 	secondTimer = INTS_PER_SECOND;
 
@@ -44,9 +47,6 @@ void sysInit() {
 
 // MAIN FUNCTION
 int main() {
-	char buf[80], rxBuf[80];
-	int rxIndex = 0;
-
 	sysInit();
 
 	// TRANSMITTER MAIN PROGRAM LOOP
@@ -89,7 +89,9 @@ int main() {
 	while(1) {
 		// am I ready to receive data?
 		if (rcvrFlag == 1) {
-			wireSendString("Requesting data...\r\n");
+			if (targetDevice == TERMINAL) {
+				wireSendString("Requesting data...\r\n");
+			}
 			radioSend(RCVR_READY);
 			rcvrFlag = 0;
 		}
@@ -98,26 +100,12 @@ int main() {
 		if (startDataFlag == 1) {
 			// populate the buffer
 			if (rxData()) {
-				wireSendString("Got good data!\r\n");
-
-				data[0] -= 60;
-				data[0] = data[0]*100/91;			
-				sprintf(buf, "ADC0    = %d%c\r\n", data[0], '%');
-				wireSendString(buf);
-				data[1] -= 60;
-				data[1] = data[1]*100/91;
-				sprintf(buf, "ADC1    = %d%c\r\n", data[1], '%');
-				wireSendString(buf);
-				data[2] = data[2]*100/255;
-				sprintf(buf, "ADC2    = %d%c\r\n", data[2], '%');
-				wireSendString(buf);
-				sprintf(buf, "Switch0 = %s\r\n", (data[3])?"Open":"Closed");
-				wireSendString(buf);
-				sprintf(buf, "Switch1 = %s\r\n\n", (data[4])?"Open":"Closed");
-				wireSendString(buf);
-
-				// process data
-				// transmit to motor controller (do we have to do more?)
+				if (targetDevice == TERMINAL) {
+					dataToTerminal();
+				}
+				else if (targetDevice == ROBOTEQ) {
+					//dataToRoboteq();  // IMPLEMENT THIS!
+				}
 			}
 			else {  // data bad?
 				// report error to transmitter?
@@ -150,21 +138,13 @@ void processButton() {
 // GETDATA
 // Gets 3 ADC readings, 2 digital readings, and populates the buffer
 void getData() {
-	/*int i;
-
-	for(i=0; i<3; i++) {
-		PORTA = 0xC0 | (0x01 << (i*2);
-		data[i] = avgADC(i*2 + 1)/4;
-	}
-	PORTA = 0xC0;*/
-
-	PORTA = 0xC1;
+	PORTA = 0xC1;  // Power to ADC channel 1
 	data[0] = getADC(1)/4;
 
-	PORTA = 0xC4;
+	PORTA = 0xC4;  // Power to ADC channel 3
 	data[1] = getADC(3)/4;
 
-	PORTA = 0xD0;
+	PORTA = 0xD0;  // Power to ADC channel 5
 	data[2] = getADC(5)/4;
 	PORTA = 0xC0;
 
@@ -257,4 +237,37 @@ ISR(USART1_RX_vect) {
 		startDataFlag = 1;
 	else if (received == CONFIG_CMD)
 		configFlag = 1;
+}
+
+void dataToTerminal() {
+	char buf[80];
+
+	wireSendString("Got good data!\r\n");
+	data[0] -= 60;
+	data[0] = data[0]*100/91;			
+	sprintf(buf, "ADC0    = %d%c\r\n", data[0], '%');
+	wireSendString(buf);
+	data[1] -= 60;
+	data[1] = data[1]*100/91;
+	sprintf(buf, "ADC1    = %d%c\r\n", data[1], '%');
+	wireSendString(buf);
+	data[2] = data[2]*100/255;
+	sprintf(buf, "ADC2    = %d%c\r\n", data[2], '%');
+	wireSendString(buf);
+	sprintf(buf, "Switch0 = %s\r\n", (data[3])?"Open":"Closed");
+	wireSendString(buf);
+	sprintf(buf, "Switch1 = %s\r\n\n", (data[4])?"Open":"Closed");
+	wireSendString(buf);
+}
+
+int roboteqInit() {
+	// query roboteq for version
+		// start timer
+		// if responded, move along
+		return 0; // timer expired
+	// set to non-verbose mode
+		// start timer
+		// check for ++
+		// if ++, return 1
+	return 0; // timer expired
 }
