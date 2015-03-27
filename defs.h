@@ -23,8 +23,11 @@
 #define RADIO_ASSOC_LIMIT 2
 #define TARGET_ASSOC_LIMIT 5
 #define DEBOUNCE_COUNT 100  // Counter for switch debouncing
+#define ROBOTEQ_CONFIRM '+'
 #define ROBOTEQ 1
 #define TERMINAL 2
+#define ROBOTEQ_MODEL "robo"
+#define ROBOTEQ_ERROR_LIMIT 10
 
 // Shared Variables
 #ifdef MAIN
@@ -35,12 +38,15 @@
 	volatile unsigned char rcvrFlag;  // Receiver is ready for sensor data
 	volatile unsigned char configFlag;  // Received command to enter config mode
 	volatile unsigned char startDataFlag;  // About to receive sensor data
+	volatile unsigned char roboteqFlag;
 	volatile unsigned int twentyFiveMS_Timer;
 	volatile unsigned int secondTimer;
 	volatile unsigned int cal_time;
 	volatile unsigned int roboteqResponseTime;
 	volatile unsigned int radioAssocTmr;
 	volatile unsigned int targetAssocTmr;
+	volatile unsigned int roboteqStatus;
+	volatile unsigned int roboteqErrCnt;
 	unsigned char data[NUM_ADC_CHANS + NUM_DIGITAL_CHANS];  // Buffer with sensor data
 	unsigned char dataMin[NUM_ADC_CHANS];
 	unsigned char dataMax[NUM_ADC_CHANS];
@@ -53,12 +59,15 @@
 	extern volatile unsigned char rcvrFlag;  // Receiver is ready for sensor data
 	extern volatile unsigned char configFlag;  // Received command to enter config mode
 	extern volatile unsigned char startDataFlag;  // About to receive sensor data
+	extern volatile unsigned char roboteqFlag;
 	extern volatile unsigned int twentyFiveMS_Timer;
 	extern volatile unsigned int secondTimer;
 	extern volatile unsigned int cal_time;
 	extern volatile unsigned int roboteqResponseTime;
 	extern volatile unsigned int radioAssocTmr;
 	extern volatile unsigned int targetAssocTmr;
+	extern volatile unsigned int roboteqStatus;
+	extern volatile unsigned int roboteqErrCnt;
 	extern unsigned char data[NUM_ADC_CHANS + NUM_DIGITAL_CHANS];  // Buffer with sensor data
 	extern unsigned char dataMin[NUM_ADC_CHANS];
 	extern unsigned char dataMax[NUM_ADC_CHANS];

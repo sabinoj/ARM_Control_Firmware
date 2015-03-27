@@ -7,7 +7,8 @@ makeCompile: main.c
 	avr-gcc -g $(flags) -mmcu=$(micro) -std=c99 -c serial.c
 	avr-gcc -g $(flags) -mmcu=$(micro) -std=c99 -c int.c
 	avr-gcc -g $(flags) -mmcu=$(micro) -std=c99 -c timer.c
-	avr-gcc -g $(flags) -mmcu=$(micro) -std=c99 -o main.elf ./main.o ./adc.o ./serial.o ./int.c ./timer.c
+	avr-gcc -g $(flags) -mmcu=$(micro) -std=c99 -c roboteq.c
+	avr-gcc -g $(flags) -mmcu=$(micro) -std=c99 -o main.elf ./main.o ./adc.o ./serial.o ./int.c ./timer.c ./roboteq.c
 	avr-objcopy -j .text -j .data -O ihex main.elf main.hex
 	avrdude -c USBasp -p $(micro) -U flash:w:main.hex:i 
 

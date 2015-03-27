@@ -38,6 +38,8 @@ ISR(USART0_RX_vect) {
 		startDataFlag = 1;
 	else if (wireReceived == CONFIG_CMD)
 		configFlag = 1;
+	else if (wireReceived == ROBOTEQ_CONFIRM)
+		roboteqFlag = 1;
 	PORTC |= TARGET_LED;
 	targetAssocTmr = TARGET_ASSOC_LIMIT;
 }
@@ -52,6 +54,8 @@ ISR(USART1_RX_vect) {
 		startDataFlag = 1;
 	else if (radioReceived == CONFIG_CMD)
 		configFlag = 1;
+	else if (wireReceived == ROBOTEQ_CONFIRM)
+		roboteqFlag = 1;
 	PORTC |= RADIO_LED;
 	radioAssocTmr = RADIO_ASSOC_LIMIT;
 }

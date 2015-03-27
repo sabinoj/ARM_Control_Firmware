@@ -1,4 +1,5 @@
 #include "defs.h"
+#include <string.h>
 
 void wireInit() {
 	#define BAUD 115200
@@ -47,5 +48,27 @@ void radioSend(char ch) {
 void radioSendString(char *str) {
 	while(*str)
 		radioSend(*str++);
+}
+
+int wireGetCmpString(volatile unsigned int *timer, char str[]) {
+	char robo[100] = "";
+	int counter = 0;
+
+	while (*timer) {
+		if (rxWireFlag) {
+			rxWireFlag = 0;
+			if (wireReceived == '\r' || wireReceived == '\n') {
+				robo[counter] == 0x00;
+				if(!strcmp(robo, str)) {
+					return 1;
+				}
+				else {
+					return -1;
+				}
+			}
+			else robo[counter++] = wireReceived;
+		}
+	}
+	return 0;
 }
 

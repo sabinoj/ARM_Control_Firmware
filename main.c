@@ -1,8 +1,10 @@
 #define MAIN
 #include "defs.h"
 #include "adc.h"
+#include "roboteq.h"
 #include "serial.h"
 #include "timer.h"
+#include <string.h>
 #include <avr/interrupt.h>
 #include <stdio.h>
 
@@ -10,9 +12,7 @@
 void getData();
 void txData(char *, int);
 int rxData(char *, int);
-int roboteqInit();
 void dataToTerminal();
-int dataToRoboteq();
 
 // SYSINIT FUNCTION
 // Sets port data directions and initializes systems
@@ -35,6 +35,8 @@ void sysInit() {
 	twentyFiveMS_Timer = INTS_PER_25MS;
 	secondTimer = INTS_PER_SECOND;
 	roboteqResponseTime = 0;
+	roboteqStatus = 0;
+	roboteqErrCnt = 0;
 
 	adcInit();
 	wireInit();
@@ -93,6 +95,12 @@ int main() {
 	#ifdef RECEIVER
 	
 	while(1) {
+		if (roboteqErrCnt > ROBOTEQ_ERROR_LIMIT)
+			roboteqStatus = 0;
+
+		if (roboteqStatus == 0)
+			while(roboteqInit() != 1);
+
 		// am I ready to receive data?
 		if (rcvrFlag == 1) {
 			if (targetDevice == TERMINAL) {
@@ -226,31 +234,3 @@ void dataToTerminal() {
 }
 
 
-// ROBOTEQINIT FUNCTION
-// Queries Roboteq for model number and initializes hardware
-// Returns 1 if successful, 0 otherwise
-int roboteqInit() {
-	// query roboteq for version
-		// start timer
-		// if responded, move along
-		return 0; // timer expired
-	// set to non-verbose mode
-		// start timer
-		// check for ++
-		// if ++, return 1
-	return 0; // timer expired
-}
-
-
-// DATATOROBOTEQ FUNCTION
-// Forms strings from sensor data and transmits to Roboteq
-// Returns 1 if all data successfully sent, 0 otherwise
-int dataToRoboteq() {
-	char buf[100];
-	wireSendString("Pinging Roboteq...!\r\n");
-	roboteqResponseTime = 5;
-	while (roboteqResponseTime);
-
-	wireSendString("Roboteq Timed Out\r\n");
-	return 0;
-}
