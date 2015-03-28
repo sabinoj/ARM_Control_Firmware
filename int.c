@@ -40,7 +40,6 @@ ISR(USART0_RX_vect) {
 		configFlag = 1;
 	else if (wireReceived == ROBOTEQ_CONFIRM)
 		roboteqFlag = 1;
-	PORTC |= TARGET_LED;
 	targetAssocTmr = TARGET_ASSOC_LIMIT;
 }
 

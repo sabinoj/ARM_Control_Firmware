@@ -3,8 +3,8 @@
 #include <avr/io.h>
 
 // Module Definition
-//#define TRANSMITTER
-#define RECEIVER
+#define TRANSMITTER
+//#define RECEIVER
 
 // Flags and comands
 #define DELAY 10

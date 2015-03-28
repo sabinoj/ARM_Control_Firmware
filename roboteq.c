@@ -62,7 +62,7 @@ int roboteqInit() {
 // DATATOROBOTEQ FUNCTION
 // Forms strings from sensor data and transmits to Roboteq
 // Returns 1 if data acknowledged, 0 otherwise
-int dataToRoboteq(char command[]) {
-	wireSendString(command);
+int dataToRoboteq() {
+	wireSendString("hello roboteq\r\n");
 	return getRoboteqConfirm();
 }

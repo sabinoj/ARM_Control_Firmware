@@ -9,7 +9,7 @@
 #include <stdio.h>
 
 // Function Prototypes
-void getData();
+void getSensorData();
 void txData(char *, int);
 int rxData(char *, int);
 void dataToTerminal();
@@ -31,7 +31,7 @@ void sysInit() {
 	rxRadioFlag = 0;
 	rxWireFlag = 0;
 	startDataFlag = 0;
-	targetDevice = ROBOTEQ;
+	targetDevice = TERMINAL;
 	twentyFiveMS_Timer = INTS_PER_25MS;
 	secondTimer = INTS_PER_SECOND;
 	roboteqResponseTime = 0;
@@ -62,7 +62,7 @@ int main() {
 	while(1) {
 		// TODO: This happens every time through the loop, too much!
 		// Replace with timer trigger
-		getData(); // get 6 adc values and stick them in the buffer
+		getSensorData(); // get 6 adc values and stick them in the buffer
 
 		// Ready command from receiver?
 		if (rcvrFlag == 1) { 
@@ -95,13 +95,13 @@ int main() {
 	#ifdef RECEIVER
 	
 	while(1) {
-		if (roboteqErrCnt > ROBOTEQ_ERROR_LIMIT)
+		if (roboteqErrCnt > ROBOTEQ_ERROR_LIMIT) 
 			roboteqStatus = 0;
 
 		if (roboteqStatus == 0)
 			while(roboteqInit() != 1);
 
-		// am I ready to receive data?
+		// Am I ready to receive data?
 		if (rcvrFlag == 1) {
 			if (targetDevice == TERMINAL) {
 				wireSendString("Requesting data...\r\n");
@@ -114,7 +114,7 @@ int main() {
 			rcvrFlag = 0;
 		}
 
-		// start byte from transmitter?
+		// Start byte from transmitter?
 		if (startDataFlag == 1) {
 			// populate the buffer
 			if (rxData(data, NUM_ADC_CHANS + NUM_DIGITAL_CHANS)) {
@@ -149,10 +149,10 @@ int main() {
 }
 
 
-// GETDATA
+// GETSENSORDATA FUNCTION
 // Collects 3 ADC readings, 2 digital readings, and populates the buffer
 // Returns nothing
-void getData() {
+void getSensorData() {
 	PORTA = 0xC1;  // Power to ADC channel 1
 	data[0] = getADC(1)/4;
 
